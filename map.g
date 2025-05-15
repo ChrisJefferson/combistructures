@@ -1,8 +1,13 @@
 LoadPackage("datastructures", false);
 LoadPackage("vole", false);
 
-DO_ATOM_OPT := true;
-DO_TUPLE_OPT := true;
+if not IsBound(DO_ATOM_OPT) then
+    DO_ATOM_OPT := true;
+fi;
+
+if not IsBound(DO_TUPLE_OPT) then
+    DO_TUPLE_OPT := true;
+fi;
 
 Fundamental := rec();
 
@@ -159,6 +164,7 @@ _buildGraph := function(graph, o, top)
                 return graph.vertices[graph.atoms[o]];
             else
                 v := _newVertex(graph, "atom", 1);
+                Assert(2, graph.atoms[o] <> fail);
                 Add(graph.edges, [graph.atoms[o], v.id]);
                 return v;
             fi;
@@ -167,6 +173,7 @@ _buildGraph := function(graph, o, top)
                 return graph.vertices[graph.atoms[o.contents]];
             else
                 v := _newVertex(graph, "atom", 1);
+                Assert(2, graph.atoms[o.contents] <> fail);
                 Add(graph.edges, [graph.atoms[o.contents], v.id]);
                 return v;
             fi;
@@ -338,7 +345,8 @@ makeMatExample := function(n, matrix)
     Add(m, Combinatorial.Matrix(l, i2));
     od;;
     fullm := Combinatorial.Matrix(m, i1);;
-    return StabilizerOfFundamentalStructure(fullm, [1..3*n]);
+    return fullm;
+    
 end;
 
 

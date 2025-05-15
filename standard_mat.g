@@ -1,5 +1,6 @@
+LoadPackage("digraphs");
 makeStandardMatrix := function(n, matrix)
-    local i1, i2, val, mat, vert, i, j, cols, edges, group;
+    local i1, i2, val, mat, vert, i, j, cols, edges, group, d;
 
     i1 := 0;
     i2 := n;
@@ -37,8 +38,3 @@ makeStandardMatrix := function(n, matrix)
 
     return group;
 end;
-
-n := 80;
-mat := List([1..n], x -> [1..n]);
-
-grp := makeStandardMatrix(n, mat);
