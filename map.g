@@ -1,8 +1,8 @@
 LoadPackage("datastructures", false);
 LoadPackage("vole", false);
 
-DO_GRAPH_OPT := true;
-
+DO_ATOM_OPT := true;
+DO_TUPLE_OPT := false;
 
 Fundamental := rec();
 
@@ -115,7 +115,13 @@ end
 
 OnFundamental := function(f,p)
     local ret;
+
+    if IsInt(f) then
+        return f^p;
+    fi;
+
     ret := rec(kind := f.kind, type := f.type);
+    
     if f.kind = Fundamental.AtomType then
         ret.contents := f.contents^p;
     elif f.kind = Fundamental.CollectionType then
@@ -145,11 +151,19 @@ _idOfOmega := function(graph, o)
     return v.id;
 end;
 
-_buildGraph := function(graph, o)
+_buildGraph := function(graph, o, top)
         local v, children,max, i, c;
         max := 1;
-        if o.kind = Fundamental.AtomType then
-            if DO_GRAPH_OPT then
+        if IsInt(o) then
+            if DO_ATOM_OPT and not top then
+                return graph.vertices[graph.atoms[o]];
+            else
+                v := _newVertex(graph, "atom", 1);
+                Add(graph.edges, [graph.atoms[o], v.id]);
+                return v;
+            fi;
+        elif o.kind = Fundamental.AtomType then
+            if DO_ATOM_OPT and not top  then
                 return graph.vertices[graph.atoms[o.contents]];
             else
                 v := _newVertex(graph, "atom", 1);
@@ -157,7 +171,7 @@ _buildGraph := function(graph, o)
                 return v;
             fi;
         elif o.kind = Fundamental.CollectionType then
-            children := List(o.contents, x -> _buildGraph(graph, x));
+            children := List(o.contents, x -> _buildGraph(graph, x, false));
             for c in children do
                 max := Maximum(c.height, max);
             od;
@@ -172,9 +186,9 @@ _buildGraph := function(graph, o)
             return v;
         elif o.kind = Fundamental.TupleType then
             v := [];
-            children := List(o.contents, x -> _buildGraph(graph, x));
+            children := List(o.contents, x -> _buildGraph(graph, x, false));
             max := Maximum(Concatenation([0], List(children, x -> x.height)));
-            if DO_GRAPH_OPT then
+            if DO_TUPLE_OPT then
                 v := _newVertex(graph, "tupleHack", max);
                 for c in children do
                     Add(graph.edges, [v.id, c.id]);
@@ -228,7 +242,7 @@ GraphOfFundamentalStructure := function(s, omega, parts)
         graph.atoms[graph.vertices[i].name[1]] := i;
     od;
 
-    _buildGraph(graph, s);
+    _buildGraph(graph, s, true);
 
     return graph;
 end;
@@ -277,7 +291,7 @@ end;
 
 StabilizerOfFundamentalStructureWithGroup := function(fs, omega, grp)
     local g, group, cangroup;
-    g := _convertToDigraph(fs, omega);
+    g := _convertToDigraph(fs, omega, [omega]);
     cangroup := Group(Concatenation(GeneratorsOfGroup(grp), GeneratorsOfGroup(SymmetricGroup([Length(omega)+1..DigraphNrVertices(g.graph)]))));
     group := VoleFind.Group(cangroup,
         [
@@ -293,7 +307,7 @@ end;
 
 CanonicalPermOfFundamentalStructureWithGroup := function(fs, omega, grp)
     local g, perm, cangroup;
-    g := _convertToDigraph(fs, omega);
+    g := _convertToDigraph(fs, omega, [omega]);
     cangroup := Group(Concatenation(GeneratorsOfGroup(grp), GeneratorsOfGroup(SymmetricGroup([Length(omega)+1..DigraphNrVertices(g.graph)]))));
     perm := VoleFind.CanonicalPerm(cangroup,
         [
@@ -312,28 +326,28 @@ end;
 
 
 makeMatExample := function(n, matrix)
-    local i1, i2, v, mat, m, fullm;
-    i1 := List([1..n], x -> C.Atom(x));;
-    i2 := List([n+1..2*n], x -> C.Atom(x));;
-    v := List([2*n+1..3*n], x -> C.Atom(x));;
+    local i1, i2, v, mat, m, fullm, i, l;
+    i1 := List([1..n], x -> Combinatorial.Atom(x));;
+    i2 := List([n+1..2*n], x -> Combinatorial.Atom(x));;
+    v := List([2*n+1..3*n], x -> Combinatorial.Atom(x));;
     m := [];;
     for i in [1..n] do
     l := List([1..n], j -> v[matrix[i,j]]);
-    Add(m, C.Matrix(l, i2));
+    Add(m, Combinatorial.Matrix(l, i2));
     od;;
-    fullm := C.Matrix(m, i1);;
+    fullm := Combinatorial.Matrix(m, i1);;
     return StabilizerOfFundamentalStructure(fullm, [1..3*n]);
 end;
 
 
 makeMat2Example := function(n, matrix)
-    local i1, i2, v, mat, m, fullm;
-    i1 := List([1..n], x -> C.Atom(x));;
-    i2 := List([n+1..2*n], x -> C.Atom(x));;
-    v := List([2*n+1..3*n], x -> C.Atom(x));;
+    local i1, i2, v, mat, m, fullm, l;
+    i1 := List([1..n], x -> Combinatorial.Atom(x));;
+    i2 := List([n+1..2*n], x -> Combinatorial.Atom(x));;
+    v := List([2*n+1..3*n], x -> Combinatorial.Atom(x));;
 
     l := List([1..n], x -> List([1..n], y -> v[matrix[x,y]]));
 
-    fullm := C.Matrix2D(l, i1, i2);;
+    fullm := Combinatorial.Matrix2D(l, i1, i2);;
     return StabilizerOfFundamentalStructure(fullm, [1..3*n]);
 end;

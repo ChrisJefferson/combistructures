@@ -1,13 +1,4 @@
 gap> Read("map.g");
-gap> checkStabilizer := function(fs, omega, g)
-> local gfs;
-> gfs := StabilizerOfFundamentalStructure(fs, omega);
-> if g <> gfs then
->  Print(fs, omega, g, gfs);
->  return false;
-> fi;
-> return true;
-> end;;
 gap> n := 4;;
 gap> C := Combinatorial;;
 gap> i1 := List([1..n], x -> C.Atom(x));;
@@ -20,4 +11,5 @@ gap> for i in [1..4] do
 >      Add(m, C.Matrix(l, i2));
 >    od;;
 gap> fullm := C.Matrix(m, i1);;
-gap> StabilizerOfFundamentalStructure(fullm, [1..3*n]);
+gap> StabilizerOfFundamentalStructure(fullm, [1..3*n]) = Group([ (1,3)(2,4)(5,6)(7,8)(9,10) ]);
+true
