@@ -1,6 +1,9 @@
 LoadPackage("datastructures", false);
 LoadPackage("vole", false);
 
+DO_GRAPH_OPT := true;
+
+
 Fundamental := rec();
 
 _CollectionTuple := function(l, type)
@@ -25,6 +28,30 @@ Combinatorial := rec(
     Tuple := function(l)
         return Fundamental.TupleOfWithType(l, "tuple");
     end,
+
+    Matrix := function(vals, index)
+        local l, i;
+        Assert(1, Length(vals) = Length(index));
+        l := [];
+        for i in [1..Length(vals)] do
+            Add(l, Fundamental.TupleOfWithType([vals[i], index[i]], "matrix1d"));
+        od;
+        return Fundamental.CollectionOfWithType(l, "matrix1dtop");
+    end,
+
+    Matrix2D := function(vals, index1, index2)
+        local l, i, j;
+        Assert(1, Length(vals) = Length(index1));
+        Assert(1, Length(vals[1]) = Length(index2));
+        l := [];
+        for i in [1..Length(index1)] do
+            for j in [1..Length(index2)] do
+                Add(l, Fundamental.TupleOfWithType([vals[i,j], index1[i], index2[j]], "matrix2d"));
+            od;
+        od;
+        return Fundamental.CollectionOfWithType(l, "matrix2dtop");
+    end,
+
 
     Permutation := function(p)
         local moved;
@@ -122,9 +149,13 @@ _buildGraph := function(graph, o)
         local v, children,max, i, c;
         max := 1;
         if o.kind = Fundamental.AtomType then
-            v := _newVertex(graph, "atom", 1);
-            Add(graph.edges, [_idOfOmega(graph, o.contents), v.id]);
-            return v;
+            if DO_GRAPH_OPT then
+                return graph.vertices[graph.atoms[o.contents]];
+            else
+                v := _newVertex(graph, "atom", 1);
+                Add(graph.edges, [graph.atoms[o.contents], v.id]);
+                return v;
+            fi;
         elif o.kind = Fundamental.CollectionType then
             children := List(o.contents, x -> _buildGraph(graph, x));
             for c in children do
@@ -143,30 +174,58 @@ _buildGraph := function(graph, o)
             v := [];
             children := List(o.contents, x -> _buildGraph(graph, x));
             max := Maximum(Concatenation([0], List(children, x -> x.height)));
-            for i in [1..Length(children)] do
-                Add(v, _newVertex(graph, Concatenation("tuple", String(i)), max));
-                Add(graph.edges, [v[i].id, children[i].id]);
-                if i <> 1 then
-                    Add(graph.edges, [v[i].id, v[i-1].id]);
-                fi;
-            od;
-            return v[1];
+            if DO_GRAPH_OPT then
+                v := _newVertex(graph, "tupleHack", max);
+                for c in children do
+                    Add(graph.edges, [v.id, c.id]);
+                    max := Maximum(c.height, max);
+                od;
+
+                return v;
+            else
+                for i in [1..Length(children)] do
+                    Add(v, _newVertex(graph, Concatenation("tuple", String(i)), max));
+                    Add(graph.edges, [v[i].id, children[i].id]);
+                    if i <> 1 then
+                        Add(graph.edges, [v[i].id, v[i-1].id]);
+                    fi;
+                od;
+                return v[1];
+            fi;
         fi;
 
         Assert(0, "Invalid kind: ", o.kind);
 end;
 
+_hash_default := function(hash, val, default)
+    if val in hash then
+        return hash[val];
+    else
+        return default;
+    fi;
+end;
+
 # The vertices in Omega are always put at the start
-GraphOfFundamentalStructure := function(s, omega)
-    local graph, i;
+GraphOfFundamentalStructure := function(s, omega, parts)
+    local graph, i, j, cols;
 
+    cols := HashMap();
 
-    graph := rec(vertices := [], edges := [], omega := Length(omega));
+    for i in parts do
+        for j in i do
+            cols[j] := [Fundamental.PAtom, i];
+        od;
+    od;
+    
 
-    Append(graph.vertices, List(omega, x -> rec(name := [x, Fundamental.AtomVertex], colour := Fundamental.PAtom, height := 1)));
+    graph := rec(vertices := [], edges := [], omega := Length(omega), atoms := HashMap());
+
+    Append(graph.vertices, List(omega, x -> rec(name := [x, Fundamental.AtomVertex], colour := _hash_default(cols, x, Fundamental.PAtom), height := 1)));
 
     for i in [1..Length(graph.vertices)] do
         graph.vertices[i].id := i;
+
+        graph.atoms[graph.vertices[i].name[1]] := i;
     od;
 
     _buildGraph(graph, s);
@@ -174,9 +233,9 @@ GraphOfFundamentalStructure := function(s, omega)
     return graph;
 end;
 
-_convertToDigraph := function(fs, omega)
+_convertToDigraph := function(fs, omega, parts)
     local g, e, c, edges, colourset, colourtupleset;
-    g := GraphOfFundamentalStructure(fs, omega);
+    g := GraphOfFundamentalStructure(fs, omega, parts);
     edges := List(g.vertices, x -> []);
     for e in g.edges do
         Add(edges[e[1]], e[2]);
@@ -190,16 +249,27 @@ _convertToDigraph := function(fs, omega)
     return rec(graph := Digraph(edges), colours := colourtupleset);
 end;
 
-StabilizerOfFundamentalStructure := function(fs, omega)
+StabilizerOfFundamentalStructure := function(fs, omega, parts...)
     local g, group;
-    g := _convertToDigraph(fs, omega);
-    group := VoleFind.Group(
-        SymmetricGroup(DigraphVertices(g.graph)),
+    Assert(0, Length(parts) <= 1);
+    if Length(parts) = 1 then
+        parts := parts[1];
+    else
+        parts := [];
+    fi;
+
+    g := _convertToDigraph(fs, omega, parts);
+
+
+       if false then
+        group := VoleFind.Group(SymmetricGroup(DigraphVertices(g.graph)),
         [
-        Constraint.Stabilize(g.graph, OnDigraphs),
-        Constraint.Stabilize(g.colours, OnTuplesSets)
-        ]
-    );
+            Constraint.Stabilize(g.graph, OnDigraphs),
+            Constraint.Stabilize(g.colours, OnTuplesSets)
+        ]);
+    else
+        group := BlissAutomorphismGroup(g.graph, g.colours);
+    fi;
 
     group := Group(List(GeneratorsOfGroup(group), x -> RestrictedPerm(x, [1..Length(omega)])));
     return group;
@@ -236,4 +306,34 @@ end;
 
 CanonicalPermOfFundamentalStructure := function(fs, omega)
     return CanonicalPermOfFundamentalStructureWithGroup(fs, omega, SymmetricGroup(omega));
+end;
+
+
+
+
+makeMatExample := function(n, matrix)
+    local i1, i2, v, mat, m, fullm;
+    i1 := List([1..n], x -> C.Atom(x));;
+    i2 := List([n+1..2*n], x -> C.Atom(x));;
+    v := List([2*n+1..3*n], x -> C.Atom(x));;
+    m := [];;
+    for i in [1..n] do
+    l := List([1..n], j -> v[matrix[i,j]]);
+    Add(m, C.Matrix(l, i2));
+    od;;
+    fullm := C.Matrix(m, i1);;
+    return StabilizerOfFundamentalStructure(fullm, [1..3*n]);
+end;
+
+
+makeMat2Example := function(n, matrix)
+    local i1, i2, v, mat, m, fullm;
+    i1 := List([1..n], x -> C.Atom(x));;
+    i2 := List([n+1..2*n], x -> C.Atom(x));;
+    v := List([2*n+1..3*n], x -> C.Atom(x));;
+
+    l := List([1..n], x -> List([1..n], y -> v[matrix[x,y]]));
+
+    fullm := C.Matrix2D(l, i1, i2);;
+    return StabilizerOfFundamentalStructure(fullm, [1..3*n]);
 end;
