@@ -8,6 +8,15 @@ gap> checkStabilizer := function(fs, omega, g)
 > fi;
 > return true;
 > end;;
+gap> checkStabilizerWithParts := function(fs, omega, parts, g)
+> local gfs;
+> gfs := StabilizerOfFundamentalStructure(fs, omega, parts);
+> if g <> gfs then
+>  Print(fs, "\n", omega, "\n", g, "\n", gfs, "\n---\n");
+>  return false;
+> fi;
+> return true;
+> end;;
 gap> C := Combinatorial;;
 gap> a2 := C.Atom(2);;
 gap> a4 := C.Atom(4);;
@@ -51,4 +60,19 @@ gap> checkStabilizer(2, [1..5], SymmetricGroup([1,3,4,5]));
 true
 gap> s1 := C.Set([2,4]);;
 gap> checkStabilizer(s1, [1..5], Group((1,3),(1,3,5),(2,4)));
+true
+gap> s1 := C.Set([2,4]);;
+gap> checkStabilizerWithParts(s1, [1..5], [[1..5]], Group((1,3),(1,3,5),(2,4)));
+true
+gap> s1 := C.Set([2,4]);;
+gap> checkStabilizerWithParts(s1, [1..5], [[1,2,3,5],[4]], Group((1,3),(1,3,5)));
+true
+gap> s1 := C.Tuple([2,4]);;
+gap> checkStabilizer(s1, [1..5], Group((1,3),(1,3,5)));
+true
+gap> s1 := C.Tuple([2,4]);;
+gap> checkStabilizerWithParts(s1, [1..5], [[1..5]], Group((1,3),(1,3,5)));
+true
+gap> s1 := C.Tuple([2,4]);;
+gap> checkStabilizerWithParts(s1, [1..5], [[1,2,3,5],[4]], Group((1,3),(1,3,5)));
 true

@@ -13,3 +13,5 @@ gap> for i in [1..4] do
 gap> fullm := C.Matrix(m, i1);;
 gap> StabilizerOfFundamentalStructure(fullm, [1..3*n]) = Group([ (1,3)(2,4)(5,6)(7,8)(9,10) ]);
 true
+gap> StabilizerOfFundamentalStructure(fullm, [1..3*n],[[1..n],[n+1..2*n],[2*n+1..3*n]]) = Group([ (1,3)(2,4)(5,6)(7,8)(9,10) ]);
+true

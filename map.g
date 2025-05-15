@@ -2,7 +2,7 @@ LoadPackage("datastructures", false);
 LoadPackage("vole", false);
 
 DO_ATOM_OPT := true;
-DO_TUPLE_OPT := false;
+DO_TUPLE_OPT := true;
 
 Fundamental := rec();
 
@@ -152,7 +152,7 @@ _idOfOmega := function(graph, o)
 end;
 
 _buildGraph := function(graph, o, top)
-        local v, children,max, i, c;
+        local v, children,max, i, c, cols;
         max := 1;
         if IsInt(o) then
             if DO_ATOM_OPT and not top then
@@ -176,7 +176,7 @@ _buildGraph := function(graph, o, top)
                 max := Maximum(c.height, max);
             od;
 
-            v := _newVertex(graph, "collection",max);
+            v := _newVertex(graph, StringFormatted("collection-", Length(children)),max);
 
             for c in children do
                 Add(graph.edges, [v.id, c.id]);
@@ -189,23 +189,25 @@ _buildGraph := function(graph, o, top)
             children := List(o.contents, x -> _buildGraph(graph, x, false));
             max := Maximum(Concatenation([0], List(children, x -> x.height)));
             if DO_TUPLE_OPT then
-                v := _newVertex(graph, "tupleHack", max);
-                for c in children do
-                    Add(graph.edges, [v.id, c.id]);
-                    max := Maximum(c.height, max);
-                od;
-
-                return v;
-            else
-                for i in [1..Length(children)] do
-                    Add(v, _newVertex(graph, Concatenation("tuple", String(i)), max));
-                    Add(graph.edges, [v[i].id, children[i].id]);
-                    if i <> 1 then
-                        Add(graph.edges, [v[i].id, v[i-1].id]);
-                    fi;
-                od;
-                return v[1];
+                cols := List(children, x -> x.colour);
+                if Length(children) = Length(Set(cols)) then
+                    v := _newVertex(graph, StringFormatted("tuple-{}", cols), max);
+                    for c in children do
+                        Add(graph.edges, [v.id, c.id]);
+                        max := Maximum(c.height, max);
+                    od;
+                    return v;
+                fi;
             fi;
+
+            for i in [1..Length(children)] do
+                Add(v, _newVertex(graph, StringFormatted("tuple-{}-{}", i, Length(children)), max));
+                Add(graph.edges, [v[i].id, children[i].id]);
+                if i <> 1 then
+                    Add(graph.edges, [v[i].id, v[i-1].id]);
+                fi;
+            od;
+            return v[1];
         fi;
 
         Assert(0, "Invalid kind: ", o.kind);
@@ -225,8 +227,8 @@ GraphOfFundamentalStructure := function(s, omega, parts)
 
     cols := HashMap();
 
-    for i in parts do
-        for j in i do
+    for i in [1..Length(parts)] do
+        for j in parts[i] do
             cols[j] := [Fundamental.PAtom, i];
         od;
     od;
