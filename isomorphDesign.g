@@ -5,7 +5,7 @@ randomMat := function(n,m)
     local mat, i, j;
     mat := List([1..m], x -> List([1..n], y -> 0));
     for i in [1..m] do
-        for j in [1..5] do
+        while Sum(mat[i]) < 5 do
             mat[i,Random([1..n])] := 1;
         od;
     od;

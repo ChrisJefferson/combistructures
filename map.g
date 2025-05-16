@@ -11,6 +11,12 @@ fi;
 
 Fundamental := rec();
 
+_STR_ATOM := Immutable("atom");
+_STR_EMPTY := Immutable("empty");
+_STR_COLLECTION := Immutable("collection ");
+_STR_TUPLE := Immutable("tuple");
+_STR_TUPLE_DASH := Immutable("tuple-");
+
 _CollectionTuple := function(l, type)
     return Fundamental.CollectionOfWithType(
         List(l, x -> Fundamental.TupleOfWithType(List(x, y -> Fundamental.AtomOf(y)))), type
@@ -19,7 +25,7 @@ end;
 
 Combinatorial := rec(
     Atom := function(a)
-        return Fundamental.AtomOfWithType(a, "atom");
+        return Fundamental.AtomOfWithType(a, _STR_ATOM);
     end,
 
     Set := function(l)
@@ -31,7 +37,7 @@ Combinatorial := rec(
     end,
 
     Tuple := function(l)
-        return Fundamental.TupleOfWithType(l, "tuple");
+        return Fundamental.TupleOfWithType(l, _STR_TUPLE);
     end,
 
     Matrix := function(vals, index)
@@ -91,7 +97,7 @@ OtherVertex := 3,
 PAtom := "PAtom",
 
 AtomOf := function(a)
-    return rec(kind := Fundamental.AtomType, contents := a, type := "");
+    return rec(kind := Fundamental.AtomType, contents := a, type := _STR_EMPTY);
 end,
 
 AtomOfWithType := function(a, t)
@@ -100,7 +106,7 @@ end,
 
 CollectionOf := function(l)
     l := SortedList(l);
-    return rec(kind := Fundamental.CollectionType, contents := l, type := "");
+    return rec(kind := Fundamental.CollectionType, contents := l, type := _STR_EMPTY);
 end,
 
 CollectionOfWithType := function(l, t)
@@ -109,7 +115,7 @@ CollectionOfWithType := function(l, t)
 end,
 
 TupleOf := function(l)
-    return rec(kind := Fundamental.TupleType, contents := l, type := "");
+    return rec(kind := Fundamental.TupleType, contents := l, type := _STR_EMPTY);
 end,
 
 TupleOfWithType := function(l, t)
@@ -163,7 +169,7 @@ _buildGraph := function(graph, o, top)
             if DO_ATOM_OPT and not top then
                 return graph.vertices[graph.atoms[o]];
             else
-                v := _newVertex(graph, "atom", 1);
+                v := _newVertex(graph, _STR_ATOM, 1);
                 Assert(2, graph.atoms[o] <> fail);
                 Add(graph.edges, [graph.atoms[o], v.id]);
                 return v;
@@ -172,43 +178,39 @@ _buildGraph := function(graph, o, top)
             if DO_ATOM_OPT and not top  then
                 return graph.vertices[graph.atoms[o.contents]];
             else
-                v := _newVertex(graph, "atom", 1);
+                v := _newVertex(graph, _STR_ATOM, 1);
                 Assert(2, graph.atoms[o.contents] <> fail);
                 Add(graph.edges, [graph.atoms[o.contents], v.id]);
                 return v;
             fi;
         elif o.kind = Fundamental.CollectionType then
             children := List(o.contents, x -> _buildGraph(graph, x, false));
-            for c in children do
-                max := Maximum(c.height, max);
-            od;
+            max := MaximumList(List(children, x -> x.height), 0);
 
-            v := _newVertex(graph, StringFormatted("collection-", Length(children)),max);
+            v := _newVertex(graph, _STR_COLLECTION,max);
 
             for c in children do
                 Add(graph.edges, [v.id, c.id]);
-                max := Maximum(c.height, max);
             od;
 
             return v;
         elif o.kind = Fundamental.TupleType then
             v := [];
             children := List(o.contents, x -> _buildGraph(graph, x, false));
-            max := Maximum(Concatenation([0], List(children, x -> x.height)));
+            max := MaximumList(List(children, x -> x.height), 0);
             if DO_TUPLE_OPT then
                 cols := List(children, x -> x.colour);
                 if Length(children) = Length(Set(cols)) then
-                    v := _newVertex(graph, StringFormatted("tuple-{}", cols), max);
+                    v := _newVertex(graph, Concatenation(_STR_TUPLE_DASH, String(cols)), max);
                     for c in children do
                         Add(graph.edges, [v.id, c.id]);
-                        max := Maximum(c.height, max);
                     od;
                     return v;
                 fi;
             fi;
 
             for i in [1..Length(children)] do
-                Add(v, _newVertex(graph, StringFormatted("tuple-{}-{}", i, Length(children)), max));
+                Add(v, _newVertex(graph, _STR_TUPLE, max));
                 Add(graph.edges, [v[i].id, children[i].id]);
                 if i <> 1 then
                     Add(graph.edges, [v[i].id, v[i-1].id]);
