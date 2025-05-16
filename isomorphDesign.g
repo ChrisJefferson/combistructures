@@ -2,6 +2,17 @@ LoadPackage("digraphs", false);
 Read("map.g");
 
 randomMat := function(n,m)
+    local mat, i, j;
+    mat := List([1..m], x -> List([1..n], y -> 0));
+    for i in [1..m] do
+        for j in [1..5] do
+            mat[i,Random([1..n])] := 1;
+        od;
+    od;
+    return mat;
+end;
+
+randomMat5050 := function(n,m)
     return List([1..m], x -> List([1..n], y -> Random([0,1])));
 end;
 
@@ -32,8 +43,8 @@ makeStandardMatGraph := function(n,m,mat, icc)
     return rec(graph := Digraph(edges), colours := cols);
 end;
 
-makeCombinatorialMat := function(n,m,mat)
-    local set, i, j, member;
+makeCombinatorialMat := function(n,m,mat, icc)
+    local set, i, j, member, cols;
     # Set up vertices
     set := [];
     for i in [1..m] do
@@ -45,5 +56,11 @@ makeCombinatorialMat := function(n,m,mat)
         od;
         Add(set, Combinatorial.Set(member));
     od;
-    return Combinatorial.Set(set);
+
+    if IsList(icc) then
+        cols := Combinatorial.Set(List(icc, Combinatorial.Set));
+        return Combinatorial.Tuple([Combinatorial.Set(set), cols]);
+    else
+        return Combinatorial.Set(set);
+    fi;
 end;
