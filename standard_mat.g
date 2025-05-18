@@ -31,7 +31,7 @@ makeStandardMatrix := function(n, matrix)
             Constraint.Stabilize(cols, OnTuplesSets)
         ]);
     else
-        group := BlissAutomorphismGroup(d, cols);
+        group := _time_BlissAutomorphismGroup(d, cols);
     fi;
 
     group := Group(List(GeneratorsOfGroup(group), x -> RestrictedPerm(x, [1..3*n])));

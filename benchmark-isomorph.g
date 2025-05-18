@@ -17,42 +17,62 @@ mkGrp := function(n)
     return g;
 end;
 
-for mkIccFunc in [{n} -> false, {n} -> [[1..n/2],[n/2..n]]] do
+for conf in [ 
+     [{n}->false, false], [{n} -> [[1..n/2],[n/2..n]], false]
+    #,[{n}->false, true]
+    ]
+    do
+mkIccFunc := conf[1];
+useGrp := conf[2];
 
-for n in [100,200,400,800] do
+optGrp := false;
+
+for n in [80,160,320,640] do
     m := randomMat(n, n*setmult);
 
+    total := 0;
+    bliss := 0;
+    # optgrp := mkGrp(n);
+
     for j in [1..count] do
-        total := 0;
         GASMAN("collect");
         x1 := NanosecondsSinceEpoch();
         mat := makeStandardMatGraph(n,n*setmult, m, mkIccFunc(n));
-        grp := BlissAutomorphismGroup(mat.graph, mat.colours);
+        grp := _time_BlissAutomorphismGroup(mat.graph, mat.colours);
         x2 := NanosecondsSinceEpoch();
-        total := x2 - x1;
+        total := total + (x2 - x1);
+        bliss := bliss + _last_BlissAutomorphismGroup_time;
     od;
-    Print(Int(total/1000/count), "\t&");
+
+    total := total - bliss;
+    Print(Int(total/1000/1000/count), "&",Int(bliss/1000/1000/count), " & ");
 
     for AtomOpt in [false, true] do
-        for TupleOpt in [false, true] do
+            total := 0;
+            bliss := 0;
             for j in [1..count] do
                 DO_ATOM_OPT := AtomOpt;
-                DO_TUPLE_OPT := TupleOpt;
                 GASMAN("collect");
                 x1 := NanosecondsSinceEpoch();
                 mat2 := makeCombinatorialMat(n,n*setmult, m, mkIccFunc(n));
-                grp := StabilizerOfFundamentalStructure(mat2, [1..n]);
+                if useGrp then
+                    grp := StabilizerOfFundamentalStructureWithGroup(mat2, [1..n], optgrp);
+                else
+                    grp := StabilizerOfFundamentalStructure(mat2, [1..n]);
+                fi;
                 x2 := NanosecondsSinceEpoch();
-                total := x2-x1;
+                total := total + (x2-x1);
+                bliss := bliss + _last_BlissAutomorphismGroup_time;
             od;
-            Print(Int(total/1000/count), "\t&");
-        od;
+
+            total := total - bliss;
+            Print(Int(total/1000/1000/count), "&",Int(bliss/1000/1000/count), " & ");
     od;
     Print("\n");
 od;
 
 
-for n in [50,100,150,200] do
+for n in [80,160,320,640] do
     m := randomMat(n, n*setmult);
     mat := makeStandardMatGraph(n,n*setmult, m, mkIccFunc(n));
     mat2 := makeCombinatorialMat(n,n*setmult, m, mkIccFunc(n));
@@ -60,13 +80,10 @@ for n in [50,100,150,200] do
     Print(DigraphNrVertices(mat.graph), "&", DigraphNrEdges(mat.graph), " & ");
 
     for AtomOpt in [false, true] do
-        for TupleOpt in [false, true] do
             DO_ATOM_OPT := AtomOpt;
-            DO_TUPLE_OPT := TupleOpt;
             graph := _convertToDigraph(mat2, [1..n], [[1..n]]);
             Print(DigraphNrVertices(graph.graph), "&", DigraphNrEdges(graph.graph), " & ");
 
-        od;
     od;
     Print("\n");
 od;

@@ -6,8 +6,19 @@ if not IsBound(DO_ATOM_OPT) then
 fi;
 
 if not IsBound(DO_TUPLE_OPT) then
-    DO_TUPLE_OPT := true;
+    DO_TUPLE_OPT := false;
 fi;
+
+
+_last_BlissAutomorphismGroup_time := 0;
+
+_time_BlissAutomorphismGroup := function(g,c)
+    local x1,ret;
+    x1 := NanosecondsSinceEpoch();
+    ret := BlissAutomorphismGroup(g,c);
+    _last_BlissAutomorphismGroup_time := NanosecondsSinceEpoch() - x1;
+    return ret;
+end;
 
 Fundamental := rec();
 
@@ -293,7 +304,7 @@ StabilizerOfFundamentalStructure := function(fs, omega, parts...)
             Constraint.Stabilize(g.colours, OnTuplesSets)
         ]);
     else
-        group := BlissAutomorphismGroup(g.graph, g.colours);
+        group := _time_BlissAutomorphismGroup(g.graph, g.colours);
     fi;
 
     group := Group(List(GeneratorsOfGroup(group), x -> RestrictedPerm(x, [1..Length(omega)])));
@@ -343,8 +354,8 @@ makeMatExample := function(n, matrix)
     v := List([2*n+1..3*n], x -> Combinatorial.Atom(x));;
     m := [];;
     for i in [1..n] do
-    l := List([1..n], j -> v[matrix[i,j]]);
-    Add(m, Combinatorial.Matrix(l, i2));
+        l := List([1..n], j -> v[matrix[i,j]]);
+        Add(m, Combinatorial.Matrix(l, i2));
     od;;
     fullm := Combinatorial.Matrix(m, i1);;
     return fullm;
